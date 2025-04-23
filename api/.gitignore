@@ -8,3 +8,6 @@ venv/
 *.env
 .venv
 parsers/new.py
+
+api/Dockerfile
+api/compose.yaml

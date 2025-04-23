@@ -1,6 +1,6 @@
 services:
   api:
-    image: /api
+    image: api
     container_name: api
     restart: always
     build:

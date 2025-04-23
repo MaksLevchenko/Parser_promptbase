@@ -73,8 +73,7 @@ async def get_categories():
     return categories
 
 
-async def get_promt_by_category(category: str) -> list:
-    print(category)
+async def get_promt_by_category(category: str, count: int) -> list:
 
     categories = {
         "Art": "art,illustration,cartoon,drawing,sketch,style",
@@ -87,15 +86,18 @@ async def get_promt_by_category(category: str) -> list:
     }
     url = f"https://promptbase.com/marketplace?sortBy=hotness&domain=image&tags={categories[category]}"
     async with async_playwright() as p:
-        browser = await p.chromium.launch(channel="chrome")
+        browser = await p.chromium.launch(channel="chrome", headless=False)
         context = await browser.new_context(extra_http_headers=headers)
         page = await context.new_page()
         await page.goto(url)
+        for _ in range(count // 20):
+            page.locator("footer")
+            await page.wait_for_timeout(1000)
         flag = page.locator("a.tile-title").last
         await expect(flag).to_be_visible(timeout=50000)
         locator = await page.locator("div.item-tile").all()
         promts = []
-        for i in locator[:25]:
+        for i in locator[:count]:
             promt = {}
             l = await i.inner_html()
             soup = BeautifulSoup(l, "html.parser")
@@ -116,7 +118,6 @@ async def get_promt_by_category(category: str) -> list:
                 await page.wait_for_timeout(5000)
                 if await page.query_selector("div.rating-wrapper"):
                     rating = page.locator("div.rating-wrapper").first
-                    print(promt["link"])
                     await expect(rating).to_be_visible()
                     promt["rating"] = await rating.text_content()
                 else:
@@ -125,4 +126,5 @@ async def get_promt_by_category(category: str) -> list:
             if promt:
                 promts.append(promt)
         await browser.close()
+        print(len(promts))
         return promts
