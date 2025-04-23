@@ -1,0 +1,10 @@
+.DS_Store
+.idea
+
+__pycache__/
+.pytest_cache
+volumes/
+venv/
+*.env
+.venv
+parsers/new.py
