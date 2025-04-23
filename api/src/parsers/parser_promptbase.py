@@ -1,7 +1,6 @@
 import re
 
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -9,9 +8,6 @@ from playwright.async_api import async_playwright, expect
 
 
 import time
-
-
-load_dotenv()
 
 
 CLEANR = re.compile("<.*?>")
@@ -55,6 +51,13 @@ def cleanhtml(raw_html):
     return cleantext
 
 
+async def scroll_page(page, count: int):
+    """Прокручивает страницу"""
+    for _ in range(count):
+        await page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
+        await page.wait_for_timeout(5000)
+
+
 async def get_categories():
     url = f"https://promptbase.com/"
     driver.get(url=url)
@@ -86,13 +89,12 @@ async def get_promt_by_category(category: str, count: int) -> list:
     }
     url = f"https://promptbase.com/marketplace?sortBy=hotness&domain=image&tags={categories[category]}"
     async with async_playwright() as p:
-        browser = await p.chromium.launch(channel="chrome", headless=False)
+        browser = await p.chromium.launch(channel="chrome")
         context = await browser.new_context(extra_http_headers=headers)
         page = await context.new_page()
         await page.goto(url)
-        for _ in range(count // 20):
-            page.locator("footer")
-            await page.wait_for_timeout(1000)
+        count_page = count // 20
+        await scroll_page(page=page, count=count_page)
         flag = page.locator("a.tile-title").last
         await expect(flag).to_be_visible(timeout=50000)
         locator = await page.locator("div.item-tile").all()
@@ -126,5 +128,4 @@ async def get_promt_by_category(category: str, count: int) -> list:
             if promt:
                 promts.append(promt)
         await browser.close()
-        print(len(promts))
         return promts
