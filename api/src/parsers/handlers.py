@@ -15,12 +15,11 @@ async def get_categories():
     """Получает категории"""
     categories = await categ()
 
-    time.sleep(10)
     return {"Категории": categories}
 
 
 @router.post("/promts")
-async def get_categories(category_name: CategoryEnum, count: int):
+async def get_promts(category_name: CategoryEnum, count: int):
     """Выдаёт промты по выбранной категории"""
     promts = await get_promt_by_category(category=category_name.value, count=count)
 

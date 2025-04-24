@@ -1,25 +1,10 @@
 import re
 
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from playwright.async_api import async_playwright, expect
 
 
-import time
-
-
 CLEANR = re.compile("<.*?>")
-options = Options()
-options.add_argument(
-    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
-)
-options.add_argument(
-    "'Cookie=_ga_5X3KHQGQBX=GS1.1.1745312462.2.1.1745314358.0.0.0; _ga=GA1.1.1770056567.1745305856'"
-)
-options.add_argument("--headless")
-driver = webdriver.Chrome(options=options)
 
 cookies = {
     "_ga_5X3KHQGQBX": "GS1.1.1745312462.2.1.1745314358.0.0.0",
@@ -60,20 +45,23 @@ async def scroll_page(page, count: int):
 
 async def get_categories():
     url = f"https://promptbase.com/"
-    driver.get(url=url)
-    time.sleep(2)
-    driver.maximize_window()
-    button = driver.find_elements(by=By.CLASS_NAME, value="nav-link")[1]
-    time.sleep(2)
-    button.click()
-    time.sleep(2)
-    html = driver.page_source
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(channel="chrome", args=["--start-maximized"])
+        context = await browser.new_context(
+            extra_http_headers=headers, no_viewport=True
+        )
+        page = await context.new_page()
+        await page.goto(url)
+        await page.wait_for_timeout(1000)
+        buttons = await page.get_by_text("Categories").all()
+        button = buttons[0]
+        await button.click()
+        await page.wait_for_timeout(1000)
+        categories = await page.locator("li.second-nav-item").all()
 
-    soup = BeautifulSoup(html, "lxml")
-    categories = soup.find_all("li", {"class": "second-nav-item"})
-    categories = [category.text for category in categories]
-
-    return categories
+        categories = [await category.inner_text() for category in categories]
+        await context.close()
+        return categories
 
 
 async def get_promt_by_category(category: str, count: int) -> list:
